@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Meeting Notes — FyoTech</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="logo">🎙️</div>
+  <div class="logo-text">
+    <h1>Meeting Notes</h1>
+    <p>Record · Upload · Transcribe · Summarise</p>
+  </div>
+  <div class="hbadges">
+    <span class="badge badge-rec">Live Recorder</span>
+    <span class="badge badge-hf">HF Whisper</span>
+    <span class="badge badge-gr">Groq Llama</span>
+  </div>
+</header>
+
+<!-- ── API Keys ── -->
+<div id="keys-bar">
+  <div class="kf">
+    <span class="kdot" id="hf-dot"></span>
+    <label>HF TOKEN</label>
+    <input type="password" id="hf-key" placeholder="hf_..." oninput="App.updateDots()">
+  </div>
+  <div class="kf">
+    <span class="kdot" id="gr-dot"></span>
+    <label>GROQ KEY</label>
+    <input type="password" id="groq-key" placeholder="gsk_..." oninput="App.updateDots()">
+  </div>
+  <div class="kf">
+    <span class="kdot" id="dc-dot"></span>
+    <label>DISCORD WEBHOOK</label>
+    <input type="password" id="discord-webhook" placeholder="https://discord.com/api/webhooks/..." oninput="App.updateDiscordDot()">
+  </div>
+  <div class="kn">Keys stay in your browser only</div>
+</div>
+
+<!-- ── Input mode tabs ── -->
+<div id="mode-tabs">
+  <button class="mode-tab" id="tab-btn-record" onclick="App.switchMode('record')">
+    <div class="tab-dot"></div>🔴 Record Meeting
+  </button>
+  <button class="mode-tab active" id="tab-btn-upload" onclick="App.switchMode('upload')">
+    📁 Upload File
+  </button>
+</div>
+
+<main>
+
+  <!-- ══ LEFT PANEL ══ -->
+  <div class="panel panel-left">
+
+    <!-- Record tab -->
+    <div id="tab-record">
+      <div class="sec-title">Capture Source</div>
+      <div class="rec-source-grid">
+        <div class="rec-source selected" data-src="screen" onclick="App.selectSource(this)">
+          <div class="rs-icon">🖥️</div>
+          <div class="rs-name">Screen + Mic</div>
+          <div class="rs-desc">Screen audio and your voice</div>
+        </div>
+        <div class="rec-source" data-src="mic" onclick="App.selectSource(this)">
+          <div class="rs-icon">🎤</div>
+          <div class="rs-name">Mic Only</div>
+          <div class="rs-desc">Just your microphone</div>
+        </div>
+      </div>
+      <div id="viz-wrap">
+        <canvas id="viz-canvas"></canvas>
+        <div class="rec-timer" id="rec-timer">00:00</div>
+      </div>
+      <div id="rec-preview">
+        <audio id="rec-audio" controls></audio>
+        <div class="rec-preview-meta">
+          <div class="rec-preview-info" id="rec-preview-info"></div>
+          <button class="rec-discard" onclick="Recorder.discard()">✕ Discard</button>
+        </div>
+      </div>
+      <div class="rec-controls">
+        <button id="rec-btn" onclick="Recorder.toggle()">
+          <div class="rbtn-dot"></div>
+          <span id="rec-btn-label">Start Recording</span>
+        </button>
+        <button id="stop-btn" onclick="Recorder.stop()">■ Stop</button>
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-bottom:14px;line-height:1.6;font-family:'JetBrains Mono',monospace;">
+        Screen mode: pick tab → tick "Share tab audio". Auto-transcribes on stop.
+      </div>
+    </div>
+
+    <!-- Upload tab -->
+    <div id="tab-upload">
+      <div class="sec-title">Recording File</div>
+      <div id="drop-zone"
+           onclick="document.getElementById('file-input').click()"
+           ondragover="App.onDrag(event)"
+           ondragleave="App.onDragLeave()"
+           ondrop="App.onDrop(event)">
+        <span class="di">📁</span>
+        <h3>Drop your recording here</h3>
+        <p>Or click to browse</p>
+        <div class="fmts">mp3 · mp4 · m4a · wav · webm · ogg · flac · mov</div>
+      </div>
+      <input type="file" id="file-input" accept="audio/*,video/*"
+             onchange="App.onFile(this.files[0])">
+      <div id="file-info">
+        <div class="fi-icon" id="fi-icon">🎵</div>
+        <div class="fi-meta">
+          <div class="fi-name" id="fi-name"></div>
+          <div class="fi-size" id="fi-size"></div>
+        </div>
+        <button class="fi-rm" onclick="App.clearFile()">✕</button>
+      </div>
+    </div>
+
+    <!-- Whisper model -->
+    <div class="sec-title">Whisper Model</div>
+    <div class="model-opts">
+      <div class="mopt selected" data-model="openai/whisper-large-v3" onclick="App.selModel(this)">large-v3</div>
+      <div class="mopt" data-model="openai/whisper-medium" onclick="App.selModel(this)">medium</div>
+      <div class="mopt" data-model="openai/whisper-small" onclick="App.selModel(this)">small ⚡</div>
+    </div>
+
+    <!-- Skills -->
+    <!-- To add a skill: add a card here, add entry to js/skills.js, add colour to css/styles.css -->
+    <div class="sec-title">Meeting Skill</div>
+    <div class="skills-grid">
+      <div class="sk selected" data-skill="cyber" onclick="App.selSkill(this)">
+        <div class="skdot"></div>
+        <div class="ski">🔐</div>
+        <div class="skn">Cybersecurity</div>
+        <div class="skd">Threats, risks, CVEs</div>
+        <div class="sk-tags"><span class="sk-tag">CVEs</span><span class="sk-tag">Risks</span><span class="sk-tag">Compliance</span></div>
+      </div>
+      <div class="sk" data-skill="dev" onclick="App.selSkill(this)">
+        <div class="skdot"></div>
+        <div class="ski">⚙️</div>
+        <div class="skn">Development</div>
+        <div class="skd">Tickets, blockers, arch</div>
+        <div class="sk-tags"><span class="sk-tag">Tickets</span><span class="sk-tag">Blockers</span><span class="sk-tag">Arch</span></div>
+      </div>
+      <div class="sk" data-skill="general" onclick="App.selSkill(this)">
+        <div class="skdot"></div>
+        <div class="ski">📋</div>
+        <div class="skn">General</div>
+        <div class="skd">Summary, actions</div>
+        <div class="sk-tags"><span class="sk-tag">Summary</span><span class="sk-tag">Actions</span></div>
+      </div>
+      <div class="sk" data-skill="client" onclick="App.selSkill(this)">
+        <div class="skdot"></div>
+        <div class="ski">🤝</div>
+        <div class="skn">Client</div>
+        <div class="skd">Commitments, next steps</div>
+        <div class="sk-tags"><span class="sk-tag">Commits</span><span class="sk-tag">Follow-ups</span></div>
+      </div>
+    </div>
+
+    <!-- Custom instructions -->
+    <div class="custom-toggle" onclick="App.toggleCustom()">
+      <span style="font-size:13px;">✏️</span>
+      <span>Custom instructions</span>
+      <span id="ca" style="margin-left:auto;font-size:10px;color:var(--muted);">▼</span>
+    </div>
+    <div id="custom-wrap">
+      <label>EXTRA INSTRUCTIONS FOR GROQ</label>
+      <textarea id="custom-txt" placeholder="e.g. Always flag any mention of FyoTech clients by name."></textarea>
+    </div>
+
+    <!-- Generate button -->
+    <button id="process-btn" onclick="App.runPipeline()" disabled>✨ Generate Notes →</button>
+
+    <!-- Progress -->
+    <div id="progress">
+      <div class="steps">
+        <div class="step" id="s1"><div class="sdot">1</div><span>Sending to HuggingFace Whisper</span></div>
+        <div class="ssub" id="s1s"></div>
+        <div class="step" id="s2"><div class="sdot">2</div><span>Transcribing audio</span></div>
+        <div class="ssub" id="s2s"></div>
+        <div class="step" id="s3"><div class="sdot">3</div><span>Loading skill · Sending to Groq</span></div>
+        <div class="ssub" id="s3s"></div>
+        <div class="step" id="s4"><div class="sdot">4</div><span>Structuring notes</span></div>
+      </div>
+    </div>
+    <div id="err"></div>
+
+  </div><!-- end panel-left -->
+
+  <!-- ══ RIGHT PANEL ══ -->
+  <div style="display:flex;flex-direction:column;overflow:hidden;min-height:0;">
+
+    <!-- Right panel tabs -->
+    <div class="right-tabs">
+      <button class="rtab active" id="rtab-notes"    onclick="App.switchRightTab('notes')">📝 Notes</button>
+      <button class="rtab"        id="rtab-speakers" onclick="App.switchRightTab('speakers')">🎤 Speakers</button>
+      <button class="rtab"        id="rtab-chat"     onclick="App.switchRightTab('chat')">💬 Chat</button>
+      <button class="rtab"        id="rtab-history"  onclick="App.switchRightTab('history')">🕐 History</button>
+    </div>
+
+    <!-- Notes panel -->
+    <div class="rpanel" id="rpanel-notes" style="display:block;">
+      <div id="output-empty">
+        <div class="ei">📝</div>
+        <p>Record or upload a meeting to generate notes.</p>
+        <div class="hints">
+          <div class="hint">🔴 Record → Screen+Mic captures live meetings</div>
+          <div class="hint">📁 Upload → Zoom/Teams recording files</div>
+          <div class="hint">🔐 Cyber → CVEs · Risks · Mitigations</div>
+          <div class="hint">⚙️ Dev → Tickets · Blockers · Architecture</div>
+        </div>
+      </div>
+      <div id="notes-output">
+        <div class="notes-topbar">
+          <div>
+            <div class="notes-title" id="n-title">Meeting Notes</div>
+            <div class="notes-meta" id="n-meta"></div>
+          </div>
+          <div class="topbtns">
+            <button class="tbtn" id="copy-btn" onclick="App.copyNotes()">📋 Copy</button>
+            <button class="tbtn" onclick="App.exportMd()">⬇ .md</button>
+            <button class="tbtn discord-btn" id="discord-btn" onclick="App.sendToDiscord()">📤 Send to Discord</button>
+          </div>
+        </div>
+        <div id="discord-status" class="discord-status"></div>
+        <div class="ncard summary"><div class="nlabel">📊 Summary</div><div class="nbody" id="n-summary"></div></div>
+        <div id="n-skill-sec"></div>
+        <div class="ncard actions"><div class="nlabel">✅ Action Items</div><div id="n-actions"></div></div>
+        <div class="ncard decisions"><div class="nlabel">🔷 Key Decisions</div><div id="n-decisions"></div></div>
+        <div class="ncard transcript">
+          <div class="nlabel">🎙️ Transcript</div>
+          <div class="tr-body" id="n-tr"></div>
+          <button class="tr-toggle" id="n-tr-btn" onclick="App.toggleTr()">Show full transcript ↓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Speakers panel -->
+    <div class="rpanel" id="rpanel-speakers" style="display:none;">
+      <button id="speaker-detect-btn" onclick="App.detectSpeakers()">🎤 Detect Speakers</button>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:14px;line-height:1.6;">
+        Analyses the transcript to identify distinct speakers based on conversational patterns.
+        Generate notes first, then detect speakers.
+      </div>
+      <div id="speaker-output"></div>
+    </div>
+
+    <!-- Chat panel -->
+    <div class="rpanel" id="rpanel-chat" style="display:none;">
+      <div class="chat-controls">
+        <button class="chat-clear" onclick="Chat.clear()">Clear chat</button>
+      </div>
+      <div id="chat-messages"></div>
+      <div class="chat-input-row">
+        <textarea id="chat-input"
+                  placeholder="Ask anything about this meeting… (Enter to send)"
+                  onkeydown="Chat.handleKey(event)"
+                  rows="2"></textarea>
+        <button id="chat-send" onclick="Chat.send()">Send →</button>
+      </div>
+    </div>
+
+    <!-- History panel -->
+    <div class="rpanel" id="rpanel-history" style="display:none;">
+      <div class="history-toolbar">
+        <input type="text" id="history-search" placeholder="Search meetings…" oninput="App.onHistorySearch()">
+        <span id="history-count"></span>
+        <button class="history-clear" onclick="App.clearAllHistory()">Clear all</button>
+      </div>
+      <div id="history-empty">No meetings saved yet. Generate your first notes!</div>
+      <div id="history-list"></div>
+    </div>
+
+  </div><!-- end right panel -->
+
+</main>
+
+<!-- ── Scripts — order matters ── -->
+<script src="js/skills.js"></script>
+<script src="js/history.js"></script>
+<script src="js/speakers.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/recorder.js"></script>
+<script src="js/pipeline.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
